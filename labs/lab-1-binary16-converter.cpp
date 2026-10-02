@@ -8,20 +8,19 @@
 using namespace std;
 
 //============== Function Prototype ============== 
-void isValidChoice();
+bool isValidChoice();
 void handleBits( const unsigned short int& value, const int numberOfBits);
 void handle32BitFloat(const unsigned short int& sign, const unsigned short int& exponent,const unsigned short int& significand);
 void displayBitFields(const unsigned short int& sign, const unsigned short int& exponent, const unsigned short int& significand);
 void handleHexInput(const string& userInput, unsigned short int& binValue, bool& isValid);
 void handleBinary( const unsigned short int& sign, const unsigned short int& exponent, const unsigned short int& significand);
 
-bool choice = true;
-
 int main() {
     string userInput;
     cout << "CS230 Fall 2026 Lab 1 - Huynh, Adam\n";
+    bool choice = NULL;
 
-    while (choice) {
+    do{
         unsigned short int binValue = 0;
         bool isValid = true;
 
@@ -50,15 +49,16 @@ int main() {
                 );
             }
         }
-        isValidChoice();
-    }
+        choice = isValidChoice();
+    } while (choice);
+
     cout << "Done, program ending.\n";
 
     return 0;
 }
 
 //============== Function Declarations ==============
-void isValidChoice() {
+bool isValidChoice() {
     string input;
     // validate Y/N input non-case sensitive
     while (true) {
@@ -66,11 +66,12 @@ void isValidChoice() {
         getline(cin >> ws, input);
 
         if (input.length() == 1) {
-            char validInput = static_cast<char>(toupper(static_cast<unsigned char>(input[0])));
+            char validInput = static_cast<char>(
+                toupper(static_cast<unsigned char>(input[0]))
+                );
 
             if (validInput == 'Y' || validInput == 'N') {
-                choice = (validInput == 'Y');
-                return;
+                return (validInput == 'Y') ? true : false;
             }
         }
     }
