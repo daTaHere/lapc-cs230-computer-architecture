@@ -22,6 +22,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <string>
 #include "windows.h"
 using namespace std;
 // The following defines the size of the square image in pixels.
@@ -93,13 +94,16 @@ bool isValid(int x0, int y0, int x1, int y1);
 
 int main() {
 
+    // Moved this into a class because main was too cluttered
+    BitMap bm;
+
     int x0 = 0;
     int y0 = 0;
     int x1 = 0;
     int y1 = 0;
 
     cout << "Pierce College CS230 Fall 2026 Lab Assignment 2 - Huynh, Adam\n";
-    cout << "Enter two pairs of point coordinates in the range of 0 to 255:\n";
+    cout << "Enter two pairs of point coordinates in the range of 0 to 255.\n";
 
     // fetch users input
     cin >> x0 >> y0 >> x1 >> y1;
@@ -115,8 +119,7 @@ int main() {
 		return -1;
 	}
 
-	// Move this into a class --> main was too clutered 
-	BitMap bm;
+
 
 	// draw line
 	plotLine(bm.bits, x0, y0, x1, y1);
@@ -159,7 +162,7 @@ bool isValid(int x0, int y0, int x1, int y1) {
     return result;
 }
 
-// // Pixel plotting logic in Intel assembly  -------------------------------------------------
+// Pixel plotting logic in Intel assembly -------------------------------------------------
 void plotLine( char bits[][IMAGE_SIZE], int x0, int y0,int x1, int y1) {
     
     //Based on Intel assembler at: "Michael Abrash's Graphics Programming Black Book Special Edition"
