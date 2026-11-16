@@ -85,6 +85,12 @@
 
 #include <iostream>
 
+struct CacheLineInfo {
+    int tag;
+    bool valid;
+    bool dirty;
+};
+
 using namespace std;
 const int MEMORY_SIZE = 32768;  // Bytes
 const int CACHE_SIZE = 2048;    // Bytes
@@ -92,16 +98,28 @@ const int LINE_SIZE = 16;       // Bytes per cache line
 const int NUMBER_OF_WAYS = 2;
 const int INTEGER_SIZE = 4;     // Bytes per integer
 
-// Values calculated from the given specifications
+// ==========  Values calculated from the given specifications =============
+
+// convert an address into an array index
 const int INTEGERS_IN_MEMORY = MEMORY_SIZE / INTEGER_SIZE;
 const int INTEGERS_PER_LINE = LINE_SIZE / INTEGER_SIZE;
 const int TOTAL_CACHE_LINES = CACHE_SIZE / LINE_SIZE;
 const int NUMBER_OF_SETS = TOTAL_CACHE_LINES / NUMBER_OF_WAYS;
 
+// ================ Storage ====================
+
+// Main memory: 8,192 integers initialized to zero
+int memory[INTEGERS_IN_MEMORY] = { 0 };
+
+// Cache: 64 sets, 2 ways, 4 integers per line ===> cache[set][way][integer position]
+int cache[NUMBER_OF_SETS][NUMBER_OF_WAYS][INTEGERS_PER_LINE] = { 0 };
+
+CacheLineInfo cacheLineInfo[NUMBER_OF_SETS][NUMBER_OF_WAYS] = {};
 
 // ================  ProtoType  ====================
 
 int validateAddress(int address);
+int calculateBits(int value);
 
 int main() {
 
@@ -120,12 +138,19 @@ int main() {
      vaild
      { A 8 W 1234, A 16 R }
      ( B 8,   B 16 }
+     { C 16, C 1024, C 16384 }
 
      invalid
      { A 10 W 1234,  A 40000 R }
      { B 10.   B 40000 }
 
     */
+
+    int offsetBits = calculateBits(LINE_SIZE);
+    int indexBits = calculateBits(NUMBER_OF_SETS);
+
+    cout << "Offset bits: " << offsetBits << endl;
+    cout << "Index bits: " << indexBits << endl;
     
 
     while (command != 'X') {
@@ -167,14 +192,19 @@ int main() {
 
             break;
         }
-        case 'C': // Display the cache lines associated for an address
-            // Process C
-            break;
+        case 'C': { // Display the cache lines associated for an address
+            int address;
 
-        case 'M': // Display main-memory lines if non-zero
-            // Process M
-            break;
+            cin >> address;
+            cout << "C " << address << endl;
 
+            break;
+        }
+
+        case 'M': { // Display main-memory lines if non-zero
+            cout << "M" << endl;
+            break;
+        }
         case 'X':
             // Stop the loop
             cout << "Done." << endl;
@@ -185,6 +215,10 @@ int main() {
     return 0;
 }
 
+
+
+// ==============    Function Def  ======================
+
 int validateAddress(int address) {
 
     if (address < 0 || address > MEMORY_SIZE - INTEGER_SIZE || address % INTEGER_SIZE != 0) {
@@ -193,4 +227,16 @@ int validateAddress(int address) {
     }
 
     return address;
+}
+
+int calculateBits(int value) {
+    int bits = 0;
+    int powerOfTwo = 1;
+
+    while (powerOfTwo < value) {
+        powerOfTwo *= 2;
+        bits++;
+    }
+
+    return bits;
 }
