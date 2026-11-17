@@ -1,87 +1,32 @@
 /*
-    GIVEN PROCESSOR AND CACHE SPECIFICATIONS
+    Two-Way Set-Associative Cache Simulation
 
-    Main memory size: 32,768 bytes
-    - This tells us how much simulated main memory to create.
-    - Each integer is 4 bytes, so main memory holds:
-          32,768 / 4 = 8,192 integers
-    - Valid integer addresses are 0, 4, 8, ... 32,764.
+    This program simulates a Level 1, two-way set-associative write-back
+    cache. It uses 32-bit integers, byte-addressed main memory, 16-byte
+    cache lines, and two cache ways per set.
 
-    Cache size: 2,048 bytes
-    Cache-line size: 16 bytes
-    - These values determine the total number of cache lines:
-          2,048 / 16 = 128 cache lines
+    Memory commands are read from a test file and used to simulate processor
+    reads and writes. Each address is divided into a tag, set index, and byte
+    offset to determine where its data belongs in the cache.
 
-    Cache way size: 2
-    - This means the cache is two-way set associative.
-    - Each set has two possible cache lines, called ways.
-    - The number of cache sets is:
-          128 cache lines / 2 ways = 64 sets
+    The program handles cache hits and misses, loads blocks from main memory,
+    replaces cache lines when a set is full, and writes dirty cache data back
+    into main memory during eviction.
 
-    Integer size: 4 bytes
-    Cache-line size: 16 bytes
-    - These determine how many integers fit in one cache line:
-          16 / 4 = 4 integers per cache line
-
-    FINAL CACHE LAYOUT
-
-        64 sets
-        2 ways in each set
-        4 integers in each cache line
-
-        cache[64][2]
-        Each cache entry holds 4 integers plus:
-        - tag
-        - valid bit
-        - dirty bit
-
-    ADDRESS BREAKDOWN
-
-    Total memory is 32,768 bytes:
-        32,768 = 2^15, so each address uses 15 bits.
-
-    Cache line is 16 bytes:
-        16 = 2^4, so the offset uses 4 bits.
-        The offset selects a location inside the cache line.
-
-    There are 64 cache sets:
-        64 = 2^6, so the index uses 6 bits.
-        The index selects one of the 64 cache sets.
-
-    The remaining bits are the tag:
-        15 total bits - 6 index bits - 4 offset bits = 5 tag bits.
-        The tag identifies which main-memory block is stored in the set.
-
-    Address format:
-        [ 5-bit tag | 6-bit index | 4-bit offset ]
-
-
-    INPUT COMMAND SCHEMA
-
-    A <address> W <data>
-    - Simulate the processor writing an integer to an address.
-    - Example: A 8 W 1234
-
-    A <address> R
-    - Simulate the processor reading an integer from an address.
-    - Example: A 8 R
-
-    B <address>
-    - Display the main-memory and cache values for an address.
-    - Example: B 8
-
-    C <address>
-    - Display both cache ways in the set used by an address.
-    - Example: C 1024
-
-    M
-    - Display main-memory lines that contain nonzero data.
-
-    X
-    - End the program.
-
-    Addresses and data are entered as decimal integers.
+    Concepts demonstrated:
+    - Simulating main memory and cache storage
+    - Reading commands from an input file
+    - Validating memory addresses
+    - Dividing addresses into tag, index, and offset fields
+    - Using a two-way set-associative cache
+    - Detecting cache hits and misses
+    - Loading memory blocks into cache lines
+    - Tracking tag, valid, and dirty information
+    - Performing cache-line eviction
+    - Writing dirty cache data back into main memory
+    - Displaying cache and main-memory contents
 */
+
 #include <cctype>
 #include <fstream>
 #include <iostream>
