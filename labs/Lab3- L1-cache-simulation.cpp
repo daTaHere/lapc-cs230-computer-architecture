@@ -86,34 +86,50 @@
 #include <iostream>
 using namespace std;
 
+/*
+    Git commit 
+    Implement cache commands and write-back behavior
+
+    - Add cache hit and empty-way lookup
+    - Load memory blocks into cache lines
+    - Handle cache writes and dirty bits
+    - Add cache-line eviction and memory write-back
+    - Implement address display for the B command
+    - Implement cache-line display for the C command
+    - Implement nonzero memory display for the M command
+*/
+
+// Cache Object 
 struct CacheLineInfo {
     int tag;
     bool valid;
     bool dirty;
 };
 
-const int CACHE_SIZE = 2048;    // Bytes
-const int INTEGER_SIZE = 4;     // Bytes per integer
-const int MEMORY_SIZE = 32768;  // Bytes
+// Define operation restristions
+const int CACHE_SIZE = 2048;
+const int INTEGER_SIZE = 4;
+const int MEMORY_SIZE = 32768;
 const int INTEGERS_IN_MEMORY = MEMORY_SIZE / INTEGER_SIZE;
-const int LINE_SIZE = 16;       // Bytes per cache line
+const int LINE_SIZE = 16; 
 const int INTEGERS_PER_LINE = LINE_SIZE / INTEGER_SIZE;
 const int NUMBER_OF_WAYS = 2;
 const int TOTAL_CACHE_LINES = CACHE_SIZE / LINE_SIZE;
 const int NUMBER_OF_SETS = TOTAL_CACHE_LINES / NUMBER_OF_WAYS;
 
-// ================ Storage ====================
+// ================ Storage Arrays  ====================
 
-// Main memory: 8,192 integers initialized to zero
+// Machine Secondary Memeory
 int memory[INTEGERS_IN_MEMORY] = { 0 };
-// Cache: [64 sets] [2 ways] [4 integers per line]
+// Create Cache Object
 int cache[NUMBER_OF_SETS][NUMBER_OF_WAYS][INTEGERS_PER_LINE] = { 0 };
+// Array of cache sets [ way0, way1] 
 CacheLineInfo cacheLineInfo[NUMBER_OF_SETS][NUMBER_OF_WAYS] = {};
+// Track next Eviction
 int evictionWay = 1;
 
 
 // ================  ProtoType  ====================
-int calculateBits(int value);
 void displayAddress(int address);
 void displayCacheLines(int address);
 void displayMainMemory();
@@ -122,6 +138,7 @@ int findEmptyWay(int set);
 void loadCacheLine(int address, int set, int way, int tag);
 void processRequest(int address, char type, int data);
 void splitAddress(int address, int& tag, int& index, int& offset);
+int splitAddressHelper(int value);
 int validateAddress(int address);
 void writeBackCacheLine(int set, int way);
 
@@ -130,19 +147,26 @@ int main() {
     char command = ' ';
 
     cout << "CS230 Lab Assignment 3 - Huynh, Adam\n";
+
+    ifstream inputFile("testInput.txt");
+
+    if (!inputFile.is_open()) {
+        cout << "Unable to open CacheInput.txt" << endl;
+        return 1;
+    }
     
-    while (command != 'X') {
+    //while (command != 'X') {
+    while (inputFile >> command ) {
         cout << "Enter command: ";
-        cin >> command; 
 
         switch (command) {
         case 'A': {  // processor read or write data
             int address, data = 0;
             char type ;
-            cin >> address >> type;
+            inputFile >> address >> type;
 
             if (type == 'W') {
-                cin >> data;
+                inputFile >> data;
                 cout << "A " << address << " " << type << " " << data << endl;
             }
             else {
@@ -154,18 +178,18 @@ int main() {
             break;
         }
 
-        case 'B': { // Display the cache and memory values for an address
+        case 'B': {  // Display the cache and memory values for an address
             int address;
-            cin >> address;
+            inputFile >> address;
             cout << "B " << address << endl;
 
             address = validateAddress(address);
             displayAddress(address);
             break;
         }
-        case 'C': { // Display the cache lines associated for an address
+        case 'C': {   // Display the cache lines for an address
             int address;
-            cin >> address;
+            inputFile >> address;
             cout << "C " << address << endl;
             displayCacheLines(address);
             break;
@@ -177,6 +201,7 @@ int main() {
             break;
         }
         case 'X': // Exit program
+            cout << "X." << endl;
             cout << "Done." << endl;
             break;
         }
@@ -188,20 +213,7 @@ int main() {
 
 // ==============    Function Def  ======================
 
-// Compute bit sizes 
-int calculateBits(int value) {
-    int bits = 0;
-    int powerOfTwo = 1;
-
-    while (powerOfTwo < value) {
-        powerOfTwo *= 2;
-        bits++;
-    }
-
-    return bits;
-}
-
-// Search both CacheLine for data and output if hit
+// Display Main-Memory and Cache values for requested Address
 void displayAddress(int address) {
     // Output ===> Address: <address> memory:<value> cache: <way 0 value> <way 1 value>
     int tag, index, offset;
@@ -215,7 +227,7 @@ void displayAddress(int address) {
     for (int way = 0; way < NUMBER_OF_WAYS; way++) {
         cacheValues[way] = -1;
 
-        // Check Valid bit and tag
+        // Check Valid bit and Tag
         if (cacheLineInfo[index][way].valid && cacheLineInfo[index][way].tag == tag) {
             cacheValues[way] = cache[index][way][integerPosition];
         }
@@ -230,8 +242,9 @@ void displayAddress(int address) {
     cout << endl;
 }
 
-// Output ===> Cache line <idx> set <way> tag <tag> <four integers> V:<valid> D:<dirty>
+// Display both ways of an Address's Cache Set
 void displayCacheLines(int address) {
+    // Output ===> Cache line <idx> set <way> tag <tag> <four integers> V:<valid> D:<dirty>
     int tag, index, offset;
 
     splitAddress(address, tag, index, offset);
@@ -251,22 +264,19 @@ void displayCacheLines(int address) {
     }
 }
 
-// Display main-memory content
+// Display NONZERO data in Main-Memory
 void displayMainMemory(){
-    for (int memoryIndex = 0;
-        memoryIndex < INTEGERS_IN_MEMORY;
-        memoryIndex += INTEGERS_PER_LINE)
-    {
+    // Output ===> Memory: <four integers>
+    for (int memoryIndex = 0;  memoryIndex < INTEGERS_IN_MEMORY; memoryIndex += INTEGERS_PER_LINE) {
         bool hasNonzeroValue = false;
 
-        // Check whether this memory line contains any nonzero value
+        // Check for a NONZERO value
         for (int position = 0; position < INTEGERS_PER_LINE; position++) {
-            if (memory[memoryIndex + position] != 0) {
+            if (memory[memoryIndex + position] != 0)
                 hasNonzeroValue = true;
-            }
         }
 
-        // Display only nonzero memory lines
+        // Display Main-Memory data
         if (hasNonzeroValue) {
             cout << "Memory:";
 
@@ -278,32 +288,30 @@ void displayMainMemory(){
     }
 }
 
-//  Locate empty way for update
+//  Check for data in Cache
 int findCacheWay(int set, int tag) {
     for (int way = 0; way < NUMBER_OF_WAYS; way++) {
-        if (cacheLineInfo[set][way].valid && cacheLineInfo[set][way].tag == tag) {
+        if (cacheLineInfo[set][way].valid && cacheLineInfo[set][way].tag == tag)
             return way;
-        }
     }
     return -1;
 }
 
-// Find free way for update
+// Find unused Way in Cache Set
 int findEmptyWay(int set) {
     for (int way = 0; way < NUMBER_OF_WAYS; way++) {
-        if (!cacheLineInfo[set][way].valid) {
+        if (!cacheLineInfo[set][way].valid)
             return way;
-        }
     }
     return -1;
 }
 
-// Load cache from memory
+// Copy data to Cache from Main-Memory
 void loadCacheLine(int address, int set, int way, int tag) {
-    // Find the first address of the memory
+    // Find begining of Memory Block
     int blockStartAddress = (address / LINE_SIZE) * LINE_SIZE;
 
-    // // Set index
+    //  Find Block location in Memory
     int memoryIndex = blockStartAddress / INTEGER_SIZE;
 
     // Copy data into cache
@@ -317,51 +325,50 @@ void loadCacheLine(int address, int set, int way, int tag) {
     cacheLineInfo[set][way].dirty = false;
 }
 
-// cache logic handle read or write request to and from cache.
+// Handle Read & Write for requested Address
 void processRequest(int address, char type, int data) {
     int tag, index, offset;
 
     splitAddress(address, tag, index, offset);
     int way = findCacheWay(index, tag);
 
-    //==========  Missed =============
+    //========== Cache Miss =============
     if (way == -1) {
         // First look for an empty way
         way = findEmptyWay(index);
 
-        // CacheLine is full
+        // Cache Set is full
         if (way == -1) {
             way = evictionWay;
-            // Output ===> Input address <address> invalid
+            // Output acknowledgment of eviction
             cout << "Evicting cache[" << index
                 << "," << way << "]" << endl;
 
-            // Write to memory
-            if (cacheLineInfo[index][way].dirty) {
+            // Write to memory if Dirty flag == True
+            if (cacheLineInfo[index][way].dirty)
                 writeBackCacheLine(index, way);
-            }
 
-            // Determin next way to evicted
+            // Update next Way to Evicte
             evictionWay = (evictionWay + 1) % NUMBER_OF_WAYS;
         }
 
-        // Load from main memory into cache line
+        // Load Cache from Main-Memory
         loadCacheLine(address, index, way, tag);
     }
     int integerPosition = offset / INTEGER_SIZE;
 
-    //============ Hit ==============
+    //============ Process Write Request ==============
     if (type == 'W') {
-        // Update cache and mark the line dirty
+        // Update Cache and set Dirty flag == True
         cache[index][way][integerPosition] = data;
         cacheLineInfo[index][way].dirty = true;
     }
 }
 
-// Split the address into its cache fields
+// Split Address into Cache Object Fields ==> CacheLine( tag, index, offset ) 
 void splitAddress(int address, int& tag, int& index, int& offset) {
-    int offsetBits = calculateBits(LINE_SIZE);
-    int indexBits = calculateBits(NUMBER_OF_SETS);
+    int offsetBits = splitAddressHelper(LINE_SIZE);
+    int indexBits = splitAddressHelper(NUMBER_OF_SETS);
 
     int offsetMask = (1 << offsetBits) - 1;
     int indexMask = (1 << indexBits) - 1;
@@ -370,10 +377,23 @@ void splitAddress(int address, int& tag, int& index, int& offset) {
     index = (address >> offsetBits) & indexMask;
     tag = address >> (offsetBits + indexBits);
 }
+// Calculate bits for an Address field
+int splitAddressHelper(int value) {
+    // Base 2 
+    int bits = 0;
+    int powerOfTwo = 1;
 
-// Check address location size is within expected offset
+    while (powerOfTwo < value) {
+        powerOfTwo *= 2;
+        bits++;
+    }
+
+    return bits;
+}
+
+// Check requested Address is a Valid block
 int validateAddress(int address) {
-
+    // Make sure Address is valid and does not OVERFLOW
     if (address < 0 || address > MEMORY_SIZE - INTEGER_SIZE || address % INTEGER_SIZE != 0) {
         cout << "Input address " << address << " invalid" << endl;
         return 0;
@@ -382,20 +402,20 @@ int validateAddress(int address) {
     return address;
 }
 
-// Wirte data into memory before replacment
+// Wirte Cache data into Main-Memory
 void writeBackCacheLine(int set, int way) {
     int tag = cacheLineInfo[set][way].tag;
 
-    // Set main-memory address
+    // Find Block in Main-Memory
     int memoryBlock = (tag * NUMBER_OF_SETS) + set;
 
-    // Set index
+    // Find location in Block
     int memoryIndex = memoryBlock * INTEGERS_PER_LINE;
 
-    // Write data from cache to main memory
+    // Copy data from Cache in to Main-Memory
     for (int position = 0; position < INTEGERS_PER_LINE; position++) {
         memory[memoryIndex + position] = cache[set][way][position];
     }
-
+    // Set Dirty flag to False
     cacheLineInfo[set][way].dirty = false;
 }
