@@ -39,7 +39,7 @@ struct CacheLineInfo {
     bool dirty;
 };
 
-// Define operation restristions
+// Define operation restrictions
 const int CACHE_SIZE = 2048;
 const int INTEGER_SIZE = 4;
 const int MEMORY_SIZE = 32768;
@@ -84,11 +84,10 @@ int main() {
     ifstream inputFile("testInput.txt");
 
     if (!inputFile.is_open()) {
-        cout << "Unable to open CacheInput.txt" << endl;
+        cout << "Unable to open testInput.txt" << endl;
         return 1;
     }
     
-    //while (command != 'X') {
     while (inputFile >> command ) {
         command = static_cast<char>(toupper(command));
 
@@ -249,7 +248,7 @@ int findEmptyWay(int set) {
 
 // Copy data to Cache from Main-Memory
 void loadCacheLine(int address, int set, int way, int tag) {
-    // Find begining of Memory Block
+    // Find beginning of Memory Block
     int blockStartAddress = (address / LINE_SIZE) * LINE_SIZE;
 
     //  Find Block location in Memory
@@ -289,7 +288,7 @@ void processRequest(int address, char type, int data) {
             if (cacheLineInfo[index][way].dirty)
                 writeBackCacheLine(index, way);
 
-            // Update next Way to Evicte
+            // Update next Way to Evict
             evictionWay = (evictionWay + 1) % NUMBER_OF_WAYS;
         }
 
@@ -353,7 +352,7 @@ void writeBackCacheLine(int set, int way) {
     // Find location in Block
     int memoryIndex = memoryBlock * INTEGERS_PER_LINE;
 
-    // Copy data from Cache in to Main-Memory
+    // Copy data from Cache into Main-Memory
     for (int position = 0; position < INTEGERS_PER_LINE; position++) {
         memory[memoryIndex + position] = cache[set][way][position];
     }
