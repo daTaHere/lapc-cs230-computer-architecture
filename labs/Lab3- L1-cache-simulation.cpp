@@ -82,22 +82,10 @@
 
     Addresses and data are entered as decimal integers.
 */
+#include <cctype>
 #include <fstream>
 #include <iostream>
 using namespace std;
-
-/*
-    Git commit 
-    Implement cache commands and write-back behavior
-
-    - Add cache hit and empty-way lookup
-    - Load memory blocks into cache lines
-    - Handle cache writes and dirty bits
-    - Add cache-line eviction and memory write-back
-    - Implement address display for the B command
-    - Implement cache-line display for the C command
-    - Implement nonzero memory display for the M command
-*/
 
 // Cache Object 
 struct CacheLineInfo {
@@ -157,6 +145,8 @@ int main() {
     
     //while (command != 'X') {
     while (inputFile >> command ) {
+        command = static_cast<char>(toupper(command));
+
         cout << "Enter command: ";
 
         switch (command) {
@@ -164,6 +154,7 @@ int main() {
             int address, data = 0;
             char type ;
             inputFile >> address >> type;
+            type = static_cast<char>(toupper(type));
 
             if (type == 'W') {
                 inputFile >> data;
@@ -172,6 +163,8 @@ int main() {
             else {
                 cout << "A "<< address << " " << type << endl;
             }
+
+            cout << endl;
          
             address = validateAddress(address);
             processRequest(address, type, data);
@@ -185,6 +178,7 @@ int main() {
 
             address = validateAddress(address);
             displayAddress(address);
+            cout << endl;
             break;
         }
         case 'C': {   // Display the cache lines for an address
@@ -192,16 +186,18 @@ int main() {
             inputFile >> address;
             cout << "C " << address << endl;
             displayCacheLines(address);
+            cout << endl;
             break;
         }
 
         case 'M': { // Display main-memory lines if non-zero
             cout << "M" << endl;
             displayMainMemory();
+            cout << endl;
             break;
         }
         case 'X': // Exit program
-            cout << "X." << endl;
+            cout << "X" << endl;
             cout << "Done." << endl;
             break;
         }
